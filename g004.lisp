@@ -4,7 +4,8 @@
 (load "sokoban")
 (compile-file "procura.lisp")
 (load "procura")
-
+(compile-file "procuras.lisp")
+(load "procuras")
 
 (defun passos (caminho)
 	(reverse (third (first (last caminho)))))
@@ -43,32 +44,6 @@
     	(push (list x (1+ y)) res)
     	(push (list x (1- y)) res))
     res))
-
-
-; (defun operador (estado)
-; 	(let* ((mapa (mapa-sokoban-mapa (first estado)))
-; 		  	(novo-estado nil)
-; 		  	(proxima-posicao nil)
-; 		  	(sucessores nil)
-; 		  	(homem (first (third estado))))
-; 		(dotimes (i (length (second estado)))
-; 			(let ((caixa (nth i (second estado)))
-; 					(caminho nil)
-; 		  			(ocupadas (coloca-caixotes (limpa-mapa-aux (first estado)) (second estado))))
-; 				(dolist (jogada (jogadas-validas2 mapa ocupadas (first caixa) (second caixa)))
-; 					(when (ha-caminho (first estado) (second estado) (first homem) (second homem) (first jogada) (second jogada))
-; 						(setf novo-estado (copy-estado estado))
-; 						(setf proxima-posicao (list (+ (- (first caixa) (first jogada)) (first caixa))
-; 													(+ (- (second caixa) (second jogada)) (second caixa))))
-; 						(setf ocupadas (coloca-caixotes (limpa-mapa-aux (first estado)) (second estado)))
-; 						(unless (or (aref mapa (first proxima-posicao) (second proxima-posicao)) (aref ocupadas (first proxima-posicao) (second proxima-posicao)))
-; 							(setf (nth i (second novo-estado)) proxima-posicao)
-; 							(setf caminho (encontra-caminho (first estado) (second estado) (first homem) (second homem) (first jogada) (second jogada)))
-; 							(setf caminho (reverse caminho))
-; 							(push caixa caminho)
-; 							(setf (third novo-estado) (nconc caminho (cdr (third novo-estado))))
-; 							(setf sucessores (cons novo-estado sucessores)))))))
-; 		sucessores))
 
 
 (defun operador (estado)
