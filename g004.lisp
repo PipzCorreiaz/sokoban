@@ -69,6 +69,9 @@
 						(setf sucessores (cons novo-estado sucessores))))))
 		sucessores))
 
+(defun compara-estado (estado1 estado2)
+  (equalp (cdr estado1) (cdr estado2)))
+
 
 (defun resolve-sokoban (filename tipo-procura)
 	(let* ((estado-inicial (parse-ficheiro filename))
@@ -77,6 +80,7 @@
 			(setf (third estado-inicial) (list (third estado-inicial)))
 			(setf problema (cria-problema estado-inicial
 							(list #'operador)
-							:objectivo? #'objectivo))
+							:objectivo? #'objectivo
+       						:estado= #'compara-estado))
 			(setf caminho (first (procura problema tipo-procura)))
 		(passos caminho)))
