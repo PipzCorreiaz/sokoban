@@ -56,7 +56,7 @@
                                         (t
                                           ;; avancamos recursivamente, em profundidade,
                                           ;; para cada sucessor
-                                          (let* ((sucs (sucessores-ordernados-heuristica (problema-gera-sucessores problema (car estado)) (problema-heuristica problema)))
+                                          (let* ((sucs (sucessores-ordernados (problema-gera-sucessores problema (car estado)) (problema-heuristica problema)))
                                                  (sucs-number (list-length sucs))
                                                  (suc-index (- iteracao (cdr estado)))
                                                  (suc nil)
@@ -120,6 +120,10 @@
           (sondagem-iterativa problema profundidade-maxima))
          ((string-equal tipo-procura "ilds")
           (ilds problema profundidade-maxima))
+         ((string-equal tipo-procura "hill.climbing")
+          (hill-climbing problema))
+         ((string-equal tipo-procura "tempera")
+          (tempera-simulada problema))
          ((string-equal tipo-procura "profundidade-iterativa")
           (profundidade-iterativa problema profundidade-maxima))
          ((string-equal tipo-procura "a*")
@@ -141,7 +145,7 @@
 (defun menor-heuristica (el1 el2)
   (< (cdr el1) (cdr el2)))
 
-(defun sucessores-ordernados-heuristica (sucessores heuristica)
+(defun sucessores-ordernados (sucessores heuristica)
   (let ((heuristicos nil)
         (suc nil))
     (dolist (sucessor sucessores)
@@ -149,3 +153,49 @@
       (push suc heuristicos))
     (sort heuristicos #'menor-heuristica)
     (mapcar 'car heuristicos)))
+
+(defun sucessores-ordernados-heuristica (sucessores heuristica)
+  (let ((heuristicos nil)
+        (suc nil))
+    (dolist (sucessor sucessores)
+      (setf suc (cons sucessor (funcall heuristica sucessor)))
+      (push suc heuristicos))
+    (sort heuristicos #'menor-heuristica)))
+
+
+(defun schedule (tempo)
+  (- tempo 0.033))
+
+(defun hill-climbing (problema)
+  (let ((estado-atual (cons (problema-estado-inicial problema) most-positive-fixnum))
+        (sucessores nil))
+    (block cicle
+           (loop
+             (setf sucessores (sucessores-ordernados-heuristica (problema-gera-sucessores  problema (car estado-atual))
+                                                                (problema-heuristica problema)))
+             (if (null sucessores)
+                 (return-from cicle estado-atual)
+                 (if (< (cdr (first sucessores)) (cdr estado-atual))
+                     (setf estado-atual (first sucessores))
+                     (return-from cicle estado-atual)))))))
+
+(defun tempera-simulada (problema)
+  (let ((estado-atual (cons (problema-estado-inicial problema) most-positive-fixnum))
+        (estado-seguinte nil)
+        (sucessores nil)
+        (intervalo 0)
+        (tt 100)
+        (e 2.71828))
+    (block cicle
+           (loop
+             (setf tt (schedule tt))
+             (setf sucessores (sucessores-ordernados-heuristica (problema-gera-sucessores  problema (car estado-atual))
+                                                                (problema-heuristica problema)))
+             (when (not (null sucessores))
+               (setf estado-seguinte (nth (random (+ (- (list-length sucessores) 1) 1)) sucessores))
+               (setf intervalo (- (cdr estado-atual) (cdr estado-seguinte)))
+               (when (or (> intervalo 0) (< (expt e (/ intervalo tt)) (- 1 (random 2))))
+                 (setf estado-atual estado-seguinte)))
+             
+             (when (null sucessores)
+               (return-from cicle estado-atual))))))
