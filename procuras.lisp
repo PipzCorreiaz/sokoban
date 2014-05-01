@@ -1,3 +1,6 @@
+(compile-file "heuristicas.lisp")
+(load "heuristicas")
+
 (defun 1-samp (problema profundidade-maxima)
   "Algoritmo de procura em profundidade primeiro."
 
@@ -53,7 +56,7 @@
                                         (t
                                           ;; avancamos recursivamente, em profundidade,
                                           ;; para cada sucessor
-                                          (let* ((sucs (problema-gera-sucessores problema (car estado)))
+                                          (let* ((sucs (sucessores-ordernados-heuristica (problema-gera-sucessores problema (car estado)) (problema-heuristica problema)))
                                                  (sucs-number (list-length sucs))
                                                  (suc-index (- iteracao (cdr estado)))
                                                  (suc nil)
@@ -134,3 +137,15 @@
           (- (get-internal-run-time) tempo-inicio)
           *nos-expandidos*
           *nos-gerados*)))))
+
+(defun menor-heuristica (el1 el2)
+  (< (cdr el1) (cdr el2)))
+
+(defun sucessores-ordernados-heuristica (sucessores heuristica)
+  (let ((heuristicos nil)
+        (suc nil))
+    (dolist (sucessor sucessores)
+      (setf suc (cons sucessor (funcall heuristica sucessor)))
+      (push suc heuristicos))
+    (sort heuristicos #'menor-heuristica)
+    (mapcar 'car heuristicos)))

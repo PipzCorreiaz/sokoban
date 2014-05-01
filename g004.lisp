@@ -115,6 +115,15 @@
 			(setf problema (cria-problema estado-inicial
 							(list #'operador)
 							:objectivo? #'objectivo
+       						:heuristica #'h1
        						:estado= #'compara-estado))
 			(setf caminho (first (procura problema tipo-procura)))
 		(passos caminho)))
+
+
+(defun remove-nth (lst index)
+  (if (= index 0)
+      (cdr lst)
+      (cons (car lst) (remove-nth (cdr lst) (1- index)))))
+
+          
