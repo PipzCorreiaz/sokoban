@@ -115,7 +115,7 @@
 			(setf problema (cria-problema estado-inicial
 							(list #'operador)
 							:objectivo? #'objectivo
-       						:heuristica #'h1
+       						:heuristica #'h8
        						:estado= #'compara-estado))
 			(setf caminho (first (procura problema tipo-procura)))
 		(passos caminho)))
