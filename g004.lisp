@@ -1,5 +1,8 @@
 ;(in-package :user)
 
+(defvar *mapa*)
+(defvar *todos-estados-gerados* (make-hash-table :test 'equal))
+
 (compile-file "sokoban.lisp")
 (load "sokoban")
 (compile-file "procura.lisp")
@@ -8,13 +11,13 @@
 (load "procuras")
 
 (defun passos (caminho)
-	(reverse (third (first (last caminho)))))
+	(reverse (second (first (last caminho)))))
 
 
 
 (defun objectivo (estado)
-	(let* ((mapa (first estado))
-			(caixotes (second estado))
+	(let* ((mapa *mapa*)
+			(caixotes (first estado))
 			(posicoes-certas 0))
 	(dotimes (i (length caixotes))
 		(dolist (p caixotes)
@@ -24,15 +27,15 @@
 
 (defun copy-estado (estado)
 	(let ((copy (make-mapa-sokoban))
-			(mapa (first estado))
-			(caixas (copy-list (second estado)))
-			(pos (copy-list (third estado))))
-		(setf (mapa-sokoban-mapa copy) (copy-array (mapa-sokoban-mapa mapa)))
-		(setf (mapa-sokoban-destinos copy) (copy-list (mapa-sokoban-destinos mapa)))
-		(setf (mapa-sokoban-mapa-aux copy) (copy-array (mapa-sokoban-mapa-aux mapa)))
-		(setf (mapa-sokoban-nlinhas copy) (mapa-sokoban-nlinhas mapa))
-		(setf (mapa-sokoban-ncolunas copy) (mapa-sokoban-ncolunas mapa))
-		(list copy caixas pos)))
+			;(mapa (first estado))
+			(caixas (copy-list (first estado)))
+			(pos (copy-list (second estado))))
+		; (setf (mapa-sokoban-mapa copy) (copy-array (mapa-sokoban-mapa mapa)))
+		; (setf (mapa-sokoban-destinos copy) (copy-list (mapa-sokoban-destinos mapa)))
+		; (setf (mapa-sokoban-mapa-aux copy) (copy-array (mapa-sokoban-mapa-aux mapa)))
+		; (setf (mapa-sokoban-nlinhas copy) (mapa-sokoban-nlinhas mapa))
+		; (setf (mapa-sokoban-ncolunas copy) (mapa-sokoban-ncolunas mapa))
+		(list caixas pos)))
 
 
 (defun jogadas-validas3 (mapa ocupadas x y)
@@ -50,8 +53,8 @@
 
 
 (defun jogadas-validas4 (estado ocupadas x y)
-  (let ((mapa (mapa-sokoban-mapa (first estado)))
-        (destinos (mapa-sokoban-destinos (first estado)))
+  (let ((mapa (mapa-sokoban-mapa *mapa*))
+        (destinos (mapa-sokoban-destinos *mapa*))
         (res nil)
         (ocupadinhas nil)
         (resultadinho nil))
@@ -81,44 +84,52 @@
 
 
 (defun operador (estado)
-	(let* ((mapa (mapa-sokoban-mapa (first estado)))
-		  	(novo-estado nil)
-		  	(proxima-posicao nil)
-		  	(sucessores nil)
-		  	(homem (first (third estado))))
-		(dotimes (i (length (second estado)))
-			(let ((caixa (nth i (second estado)))
-					(caminho nil)
-		  			(ocupadas (coloca-caixotes (limpa-mapa-aux (first estado)) (second estado))))
-				(dolist (jogada (jogadas-validas4 estado ocupadas (first caixa) (second caixa)))
-					(when (ha-caminho (first estado) (second estado) (first homem) (second homem) (first jogada) (second jogada))
-						(setf novo-estado (copy-estado estado))
-						(setf proxima-posicao (list (+ (- (first caixa) (first jogada)) (first caixa))
-													(+ (- (second caixa) (second jogada)) (second caixa))))
-						(setf (nth i (second novo-estado)) proxima-posicao)
-						(setf caminho (encontra-caminho (first estado) (second estado) (first homem) (second homem) (first jogada) (second jogada)))
-						(setf caminho (reverse caminho))
-						(push caixa caminho)
-						(setf (third novo-estado) (nconc caminho (cdr (third novo-estado))))
-						(setf sucessores (cons novo-estado sucessores))))))
-		sucessores))
+  (let* ((mapa *mapa*)
+         (novo-estado nil)
+         (proxima-posicao nil)
+         (sucessores nil)
+         (homem (first (second estado))))
+    (dotimes (i (length (first estado)))
+      (let ((caixa (nth i (first estado)))
+            (caminho nil)
+            (ocupadas (coloca-caixotes (limpa-mapa-aux mapa) (first estado))))
+        (dolist (jogada (jogadas-validas4 estado ocupadas (first caixa) (second caixa)))
+          (when (ha-caminho mapa (first estado) (first homem) (second homem) (first jogada) (second jogada))
+            (setf novo-estado (copy-estado estado))
+            (setf proxima-posicao (list (+ (- (first caixa) (first jogada)) (first caixa))
+                                        (+ (- (second caixa) (second jogada)) (second caixa))))
+            (setf (nth i (first novo-estado)) proxima-posicao)
+            (when (not (gethash novo-estado *todos-estados-gerados*))
+            (setf caminho (encontra-caminho mapa (first estado) (first homem) (second homem) (first jogada) (second jogada)))
+            (setf caminho (reverse caminho))
+            (push caixa caminho)
+            (setf (second novo-estado) (nconc caminho (cdr (second novo-estado))))
+            (setf (gethash novo-estado *todos-estados-gerados*) t)
+            (setf sucessores (cons novo-estado sucessores)))))))
+    sucessores))
 
 (defun compara-estado (estado1 estado2)
-  (equalp (cdr estado1) (cdr estado2)))
+  (equalp estado1 estado2))
+
+(defun compara-posicoes-caixas (estado1 estado2)
+  (equalp (car estado1) (car estado2)))
 
 
 (defun resolve-sokoban (filename tipo-procura)
-	(let* ((estado-inicial (parse-ficheiro filename))
-			(problema nil)
-			(caminho nil))
-			(setf (third estado-inicial) (list (third estado-inicial)))
-			(setf problema (cria-problema estado-inicial
-							(list #'operador)
-							:objectivo? #'objectivo
-       						:heuristica #'h1
-       						:estado= #'compara-estado))
-			(setf caminho (first (procura problema tipo-procura)))
-		(passos caminho)))
+  (let* ((estado-inicial (parse-ficheiro filename))
+         (problema nil)
+         (caminho nil))
+    (setf *mapa* (first estado-inicial))
+    (setf estado-inicial (cdr estado-inicial))
+    (setf (gethash estado-inicial *todos-estados-gerados*) t)
+    (setf (second estado-inicial) (list (second estado-inicial)))
+    (setf problema (cria-problema estado-inicial
+                                  (list #'operador)
+                                  :objectivo? #'objectivo
+                                  :heuristica #'h1-aux
+                                  :estado= #'compara-estado))
+    (setf caminho (first (procura problema tipo-procura)))
+    (passos caminho)))
 
 
 (defun remove-nth (lst index)
@@ -126,4 +137,3 @@
       (cdr lst)
       (cons (car lst) (remove-nth (cdr lst) (1- index)))))
 
-          

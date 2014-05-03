@@ -23,6 +23,30 @@
       (setf index 0))
     res))
 
+(defun h1-aux (estado)
+  (let ((caixas (first estado))
+        (destinos (copy-list (mapa-sokoban-destinos *mapa*)))
+        (dist-min 1000)
+        (index-min nil)
+        (index 0)
+        (res 0))
+    (dolist (caixa caixas)
+      (dolist (destino destinos)
+        (let ((dist (sqrt (+ (expt (- (first caixa)
+                                      (first destino)) 2)
+                             (expt (- (second caixa)
+                                      (second destino)) 2)))))
+          (when (< dist dist-min)
+            (setf dist-min dist)
+            (setf index-min index))
+          (setf index (1+ index))))
+      (setf res (+ res dist-min))
+      (setf destinos (remove-nth destinos index-min))
+      (setf dist-min 1000)
+      (setf index-min nil)
+      (setf index 0))
+    res))
+
 
 ;soma as distancias de cada caixa dadas pelo encontra-caminho ate ao destino mais perto
 (defun h2 (estado)
@@ -108,8 +132,8 @@
                  (incf res)
                  (return-from encontra-dest-acessivel)))))
     (- (length caixas) res)))
-          
-          
+
+
 ;numero de caixas acessiveis pelo homem
 (defun h7 (estado)
   (let ((caixas (second estado))
