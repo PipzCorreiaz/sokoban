@@ -144,7 +144,7 @@
          (ocupadas (coloca-caixotes (mapa-sokoban-mapa-aux (first estado)) caixas))
          (destinos (mapa-sokoban-destinos (first estado)))
          (res 0))
-    ;(print caixas)
+    (print caixas)
     (dolist (caixa caixas)
       (let ((l (left caixa))
             (r (right caixa))
@@ -152,28 +152,31 @@
             (u (up caixa))
             (caixa-e-destino? (member caixa destinos :test #'equalp)))
               ;CASO 1
-        (cond ((and caixa-e-destino?
-                    (or (ocupada? mapa r)
-                        (ocupada? mapa l))
-                    (or (ocupada? mapa d)
-                        (ocupada? mapa u)))
-               ;(print "1")
-               (setf res (+ res 0)))
-              ;CASO 2
-              ((and caixa-e-destino?
-                    (or (ocupada? mapa d)
-                        (ocupada? mapa u)
-                        (ocupada? mapa l)
-                        (ocupada? mapa r)))
-               ;(print "2")
-               (setf res (+ res 0)))
-              ;CASO 3
-              ((or (member l destinos :test #'equalp)
-                   (member r destinos :test #'equalp)
-                   (member d destinos :test #'equalp)
-                   (member u destinos :test #'equalp))
-               ;(print "3")
-               (setf res (+ res 0)))
+        (cond (caixa-e-destino?
+                (print "e destino")
+                (setf res (+ res 0)))
+          ; ((and caixa-e-destino?
+          ;           (or (ocupada? mapa r)
+          ;               (ocupada? mapa l))
+          ;           (or (ocupada? mapa d)
+          ;               (ocupada? mapa u)))
+          ;      ;(print "1")
+          ;      (setf res (+ res 0)))
+          ;     ;CASO 2
+          ;     ((and caixa-e-destino?
+          ;           (or (ocupada? mapa d)
+          ;               (ocupada? mapa u)
+          ;               (ocupada? mapa l)
+          ;               (ocupada? mapa r)))
+          ;      ;(print "2")
+          ;      (setf res (+ res 0)))
+          ;     ;CASO 3
+          ;     ((or (member l destinos :test #'equalp)
+          ;          (member r destinos :test #'equalp)
+          ;          (member d destinos :test #'equalp)
+          ;          (member u destinos :test #'equalp))
+          ;      ;(print "3")
+          ;      (setf res (+ res 0)))
               ;CASO 4
               ((and (not (ocupada? ocupadas l))
                     (not (ocupada? ocupadas r))
@@ -183,8 +186,8 @@
                     (not (ocupada? mapa r))
                     (not (ocupada? mapa d))
                     (not (ocupada? mapa u)))
-               ;(print "4")
-               (setf res (+ res 1)))
+               (print "4")
+               (setf res (+ res 4)))
               ;CASO 5
               ((or (and (ocupada? mapa l)
                         (not (ocupada? ocupadas r))
@@ -214,8 +217,8 @@
                         (not (ocupada? mapa r))
                         (not (ocupada? mapa d))
                         (not (ocupada? mapa l))))
-               ;(print "5")
-               (setf res (+ res 2)))
+               (print "5")
+               (setf res (+ res 8)))
               ;CASO 6
               ((or (and (ocupada? ocupadas l)
                         (not (ocupada? ocupadas r))
@@ -245,8 +248,8 @@
                         (not (ocupada? mapa r))
                         (not (ocupada? mapa d))
                         (not (ocupada? mapa l))))
-               ;(print "6")
-               (setf res (+ res 3)))
+               (print "6")
+               (setf res (+ res 8)))
               ;CASO 7
               ((or (and (ocupada? ocupadas u)
                         (or (ocupada? mapa l)
@@ -268,8 +271,8 @@
                             (ocupada? mapa u))
                         (not (ocupada? ocupadas l))
                         (not (ocupada? mapa l))))
-               ;(print "7")
-               (setf res (+ res 4)))
+               (print "7")
+               (setf res (+ res 8)))
               ;CASO 8
               ((or (and (ocupada? ocupadas l)
                         (ocupada? ocupadas r)
@@ -283,8 +286,8 @@
                         (not (ocupada? ocupadas r))
                         (not (ocupada? mapa l))
                         (not (ocupada? mapa r))))
-               ;(print "8")
-               (setf res (+ res 5)))
+               (print "8")
+               (setf res (+ res 8)))
               ;CASO 9
               ((or (and (or (and (ocupada? ocupadas l)
                                  (ocupada? mapa r))
@@ -302,12 +305,12 @@
                         (not (ocupada? ocupadas r))
                         (not (ocupada? mapa l))
                         (not (ocupada? mapa r))))
-               ;(print "9")
-               (setf res (+ res 6)))
+               (print "9")
+               (setf res (+ res 8)))
               (T 
-               ;(print "LOL")
-               (setf res (+ res 7))))))
-    ;(format t "RES: ~d~%" res)
+               (print "LOL")
+               (setf res (+ res 9))))))
+    (format t "RES: ~d~%" res)
     res))
 
 
