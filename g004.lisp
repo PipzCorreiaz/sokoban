@@ -1,6 +1,7 @@
 ;(in-package :user)
 
 (defvar *mapa*)
+(defvar *mapa-cantos*)
 (defvar *todos-estados-gerados* (make-hash-table :test 'equal))
 
 (compile-file "sokoban.lisp")
@@ -116,6 +117,9 @@
     (and (horizontal-freeze-deadlock? x y copia-ocupadas)
          (vertical-freeze-deadlock? x y copia-ocupadas))))
 
+(defun corner-deadlock? (posicao)
+  (eql (casa-preenchida *mapa-cantos* (first posicao) (second posicao)) 'DL))
+
 
 
 (defun operador (estado)
@@ -134,7 +138,7 @@
             (setf proxima-posicao (list (+ (- (first caixa) (first jogada)) (first caixa))
                                         (+ (- (second caixa) (second jogada)) (second caixa))))
             (setf ocupadas (coloca-caixotes (limpa-mapa-aux mapa) (first estado)))
-            (when (not (freeze-deadlock? caixa proxima-posicao ocupadas))
+            (when (and (not (corner-deadlock? proxima-posicao)) (not (freeze-deadlock? caixa proxima-posicao ocupadas)))
               (setf (nth i (first novo-estado)) proxima-posicao)
               (when (not (gethash novo-estado *todos-estados-gerados*))
                 (setf caminho (encontra-caminho mapa (first estado) (first homem) (second homem) (first jogada) (second jogada)))
@@ -155,11 +159,29 @@
 (defun casa-preenchida (mapa i j)
   (aref mapa i j))
 
+
+(defun elimina-cantos (mapa)
+  (let ((linhas (mapa-sokoban-nlinhas *mapa*))
+        (colunas (mapa-sokoban-ncolunas *mapa*))
+        (destinos (mapa-sokoban-destinos *mapa*))
+        (novo-mapa (copy-array mapa)))
+    (dotimes (i linhas novo-mapa)
+      (dotimes (j colunas)
+        (when (and (> i 0) (> j 0) (< j (- colunas 1)) (< i (- linhas 1)))
+          (when (and (or (and (casa-preenchida mapa (1+ i) j) (casa-preenchida mapa i (1+ j)))
+                         (and (casa-preenchida mapa (1- i) j) (casa-preenchida mapa i (1+ j)))
+                         (and (casa-preenchida mapa (1+ i) j) (casa-preenchida mapa i (1- j)))
+                         (and (casa-preenchida mapa (1- i) j) (casa-preenchida mapa i (1- j))))
+                     (not (casa-preenchida mapa i j))
+                     (not (destino? destinos i j)))
+            (setf (aref novo-mapa i j) 'DL)))))))
+
 (defun resolve-sokoban (filename tipo-procura)
   (let* ((estado-inicial (parse-ficheiro filename))
          (problema nil)
          (caminho nil))
     (setf *mapa* (first estado-inicial))
+    (setf *mapa-cantos* (elimina-cantos (mapa-sokoban-mapa *mapa*)))
     (setf estado-inicial (cdr estado-inicial))
     (setf (gethash estado-inicial *todos-estados-gerados*) t)
     (setf (second estado-inicial) (list (second estado-inicial)))
