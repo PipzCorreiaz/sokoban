@@ -56,17 +56,17 @@
                                         (t
                                           ;; avancamos recursivamente, em profundidade,
                                           ;; para cada sucessor
-                                          (let* ((sucs (sucessores-ordernados (problema-gera-sucessores problema (car estado)) (problema-heuristica problema)))
+                                          (let* ((sucs (second estado))
                                                  (sucs-number (list-length sucs))
-                                                 (suc-index (- iteracao (cdr estado)))
                                                  (suc nil)
                                                  (solucao nil))
-                                            (when (or (eql sucs-number 0) (= sucs-number suc-index))
+                                            (when (eql sucs-number 0)
                                               (return-from procura-prof nil))
                                             (when (not (member estado estados-gerados-importantes :test #'equalp))
                                               (setf estados-gerados-importantes (append estados-gerados-importantes (list estado))))
-                                            (setf suc (cons (nth suc-index sucs) iteracao))
-                                            ; (format t "SUCESSOR ESCOLHIDO: ~A~%~%~%" suc)
+                                            (setf suc (list (first sucs) (sucessores-ordernados (problema-gera-sucessores problema (first sucs)) (problema-heuristica problema))))
+                                            (pop sucs)
+                                            (setf (second estado) sucs)
                                             (setf estados-gerados-importantes (append estados-gerados-importantes (list suc)))
                                             (setf solucao (procura-prof suc
                                                                         (cons (car estado) caminho)
@@ -79,7 +79,8 @@
                            (let ((resultado nil))
                              ; (format t "ITERACAO ~d~%" iteracao)
                              (when (and (= iteracao 0) (null estados-gerados))
-                               (setf estados-gerados (list (cons estado iteracao))))
+                               ; (setf estados-gerados (list (cons estado iteracao))))
+                               (setf estados-gerados (list (list estado (sucessores-ordernados (problema-gera-sucessores problema estado) (problema-heuristica problema))))))
                              (dolist (estado-gerado estados-gerados)
                                (setf resultado (procura-prof estado-gerado caminho prof-atual iteracao))
                                (when resultado
@@ -196,6 +197,6 @@
                (setf intervalo (- (cdr estado-atual) (cdr estado-seguinte)))
                (when (or (> intervalo 0) (< (expt e (/ intervalo tt)) (- 1 (random 2))))
                  (setf estado-atual estado-seguinte)))
-             
+
              (when (null sucessores)
                (return-from cicle estado-atual))))))
