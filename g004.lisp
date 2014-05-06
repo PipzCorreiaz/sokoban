@@ -186,14 +186,13 @@
          (caminho nil))
     (setf *mapa* (first estado-inicial))
     (setf *mapa-cantos* (elimina-cantos (mapa-sokoban-mapa *mapa*)))
-    (format t "MAPA: ~A~%~%" *mapa-cantos*)
     (setf estado-inicial (cdr estado-inicial))
     (setf (gethash estado-inicial *todos-estados-gerados*) t)
     (setf (second estado-inicial) (list (second estado-inicial)))
     (setf problema (cria-problema estado-inicial
                                   (list #'operador)
                                   :objectivo? #'objectivo
-                                  :heuristica #'h1-aux
+                                  :heuristica #'h1-alt
                                   :estado= #'compara-estado))
     (setf caminho (first (procura problema tipo-procura)))
     (passos caminho)))
