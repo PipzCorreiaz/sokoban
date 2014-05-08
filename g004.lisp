@@ -240,7 +240,8 @@
         (destino nil))
     (setf novo-caminho (second (first (last caminho))))
     (setf destino (first novo-caminho))
-    (nconc (encontra-caminho *mapa* caixas (first homem) (second homem) (first destino) (second destino)) (cdr novo-caminho))))
+    (unless (null destino)
+      (nconc (encontra-caminho *mapa* caixas (first homem) (second homem) (first destino) (second destino)) (cdr novo-caminho)))))
   
 
 (defun resolve-sokoban (filename tipo-procura)
