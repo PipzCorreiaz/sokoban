@@ -92,6 +92,55 @@
                              ;))))
             (looper (problema-estado-inicial problema) nil 0 0))))
 
+(defun ida* (problema &key espaco-em-arvore?)
+  (let ((estado= (problema-estado= problema))
+        (heur (problema-heuristica problema))
+        (fun-custo (problema-custo problema))
+        (objectivo? (problema-objectivo? problema)))
+
+    (labels ((esta-no-caminho? (estado caminho)
+                               (unless espaco-em-arvore?
+                                 (member estado caminho :test estado=)))
+
+             (prof (estado custo-max custo-caminho caminho)
+                   (block prof
+                          (if (esta-no-caminho? estado caminho)
+                              nil
+                              (let ((custo (+ custo-caminho (funcall heur estado))))
+                                (cond ((> custo custo-max) custo)
+                                      ((funcall objectivo? estado) (list estado))
+                                      (t
+                                        (let ((min-custo most-positive-fixnum))
+                                          (dolist (suc (problema-gera-sucessores
+                                                         problema estado))
+                                            (let ((solucao (prof suc
+                                                                 custo-max
+                                                                 (+ custo-caminho
+                                                                    (funcall fun-custo suc))
+                                                                 (or espaco-em-arvore?
+                                                                     (cons estado
+                                                                           caminho)))))
+                                              (if (numberp solucao)
+                                                  (setf min-custo (min min-custo
+                                                                       solucao))
+                                                  (if solucao
+                                                      (return-from prof (cons estado
+                                                                              solucao))))))
+                                          min-custo))))))))
+
+            (let ((custo-max 0))
+              (loop
+                (setf *todos-estados-gerados* (make-hash-table :test 'equal))
+                (let ((solucao (prof (problema-estado-inicial problema)
+                                     custo-max
+                                     0
+                                     nil)))
+                  (if (numberp solucao)
+                      (if (> solucao custo-max)
+                          (setf custo-max solucao)
+                          (return nil))
+                      (return solucao))))))))
+
 (defun procura (problema tipo-procura
         &key (profundidade-maxima most-positive-fixnum)
              (espaco-em-arvore? nil))

@@ -190,7 +190,6 @@
           (setf proxima-posicao-homem (list (+ (first jogada) (first pos-diff)) (+ (second jogada) (second pos-diff))))
           (unless (or (casa-preenchida ocupadas (first proxima-posicao-homem) (second proxima-posicao-homem)) (casa-ocupada *mapa* (first proxima-posicao-homem) (second proxima-posicao-homem)))
             (setf (nth i (first novo-estado)) jogada)
-            ;(when (not (gethash (list (first novo-estado) proxima-posicao-homem) *todos-estados-gerados*))
             (setf aux (gethash (first novo-estado) *todos-estados-gerados*))
             (when (or (null aux) (not (ha-caminho *mapa* (first estado) (first proxima-posicao-homem) (second proxima-posicao-homem) (first aux) (second aux))))
               (if (= (list-length (second estado)) 1)
@@ -201,10 +200,7 @@
               (unless (or (null caminho) (not (ha-caminho *mapa* (first estado) (first homem) (second homem) (first jogada) (second jogada))))
                 (push proxima-posicao-homem caminho)
                 (setf (second novo-estado) (nconc caminho (cdr (second novo-estado))))
-                ;(setf (gethash (list (first novo-estado) proxima-posicao-homem) *todos-estados-gerados*) t)
                 (setf (gethash (first novo-estado) *todos-estados-gerados*) proxima-posicao-homem)
-                ;(print novo-estado)
-                ;(break)
                 (setf sucessores (cons novo-estado sucessores))))))))
     sucessores))
 
@@ -242,7 +238,7 @@
     (setf destino (first novo-caminho))
     (unless (null destino)
       (nconc (encontra-caminho *mapa* caixas (first homem) (second homem) (first destino) (second destino)) (cdr novo-caminho)))))
-  
+
 
 (defun resolve-sokoban (filename tipo-procura)
   (let* ((estado-inicial (parse-ficheiro filename))
