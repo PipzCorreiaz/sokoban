@@ -263,7 +263,7 @@
     ;(setf (third estado-inicial) nil)
     (setf *mapa-cantos* (elimina-cantos (mapa-sokoban-mapa *mapa*)))
     (setf estado-inicial (cdr estado-inicial))
-    (setf (gethash estado-inicial *todos-estados-gerados*) t)
+    (setf (gethash (first estado-inicial) *todos-estados-gerados*) homem)
     (setf (second estado-inicial) (list (second estado-inicial)))
     (setf problema (cria-problema estado-inicial
                                   ;(list #'operador)
