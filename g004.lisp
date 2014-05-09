@@ -143,6 +143,10 @@
               (return-from tunnel (list (list (car caixa) next-pos) caminho)))
             (setf i (1+ i)))))))
 
+(defun player-surrounded? (caixas proxima-posicao)
+  (let ((ocupadas (coloca-caixotes (limpa-mapa-aux *mapa*) caixas)))
+    (null (jogadas-validas2 (mapa-sokoban-mapa *mapa*) ocupadas (first proxima-posicao) (second proxima-posicao)))))
+
 
 (defun operador (estado)
   (let* ((mapa *mapa*)
@@ -197,7 +201,9 @@
                   (block
                     (setf caminho nil)
                     (setf caminho (reverse (encontra-caminho *mapa* (first estado) (first homem) (second homem) (first jogada) (second jogada))))))
-              (unless (or (null caminho) (not (ha-caminho *mapa* (first estado) (first homem) (second homem) (first jogada) (second jogada))))
+              (unless (or (null caminho)
+                          (not (ha-caminho *mapa* (first estado) (first homem) (second homem) (first jogada) (second jogada)))
+                          (player-surrounded? (first novo-estado) proxima-posicao-homem))
                 (push proxima-posicao-homem caminho)
                 (setf (second novo-estado) (nconc caminho (cdr (second novo-estado))))
                 (setf (gethash (first novo-estado) *todos-estados-gerados*) proxima-posicao-homem)
