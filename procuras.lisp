@@ -33,6 +33,7 @@
             (procura-prof (problema-estado-inicial problema) nil 0))))
 
 (defun sondagem-iterativa (problema profundidade-maxima)
+  (setf *todos-estados-gerados* (make-hash-table :test 'equal))
   (let ((solucao (1-samp problema profundidade-maxima)))
     (if solucao
         solucao
