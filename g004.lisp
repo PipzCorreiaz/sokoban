@@ -440,8 +440,8 @@
 
 (defun copy-estado (estado)
 	(let ((caixas (copy-list (first estado)))
-			(pos (copy-list (second estado))))
-		(list caixas pos)))
+        (pos (copy-list (second estado))))
+      (list caixas pos)))
 
 
 (defun jogadas-validas3 (mapa ocupadas x y)
@@ -678,17 +678,18 @@
                          (setf caminho (third tunnel-res))
                          (progn
                            (setf caminho nil)
-                           (setf caminho (reverse (encontra-caminho *mapa* (first estado) (first homem) (second homem) (first jogada) (second jogada))))
+                           (setf caminho (encontra-caminho *mapa* (first estado) (first jogada) (second jogada) (first homem) (second homem)))
                            (when (null caminho)
                              (return-from processa-jogadas nil))
                            ;(format t "CAMINHO 1: ~A~%" caminho)
                            (setf caminho (nconc (third tunnel-res) (cdr caminho)))))
                      (unless (or (null caminho)
+                                 (gethash (sxhash (list (first novo-estado) proxima-posicao-homem)) *todos-estados-gerados*)
                                  (player-surrounded? (first novo-estado) proxima-posicao-homem))
                        (push proxima-posicao-homem caminho)
                        (setf (second novo-estado) (nconc caminho (cdr (second novo-estado))))
                        (setf aux (cons jogada aux))
-                       ;(setf (gethash (first novo-estado) *todos-estados-gerados*) proxima-posicao-homem)
+                       (setf (gethash (sxhash (list (first novo-estado) proxima-posicao-homem)) *todos-estados-gerados*) t)
                        ;(format t "SUCESSOR: ~A~%" novo-estado)
                        ;(break)
                        (setf sucessores (cons novo-estado sucessores)))))))))
