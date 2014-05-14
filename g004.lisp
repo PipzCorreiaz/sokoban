@@ -258,6 +258,64 @@
                              ;))))
             (looper (problema-estado-inicial problema) nil 0 0))))
 
+(defun dds (problema profundidade-maxima)
+  "Algoritmo de procura em profundidade primeiro."
+
+  (let ((estado= (problema-estado= problema))
+        (objectivo? (problema-objectivo? problema))
+        (estados-gerados (make-hash-table))
+        (lista-aux nil))
+
+    (labels ((esta-no-caminho? (estado caminho)
+                               (member estado caminho :test estado=))
+             (procura-prof (estado caminho prof-actual)
+                           (block procura-prof
+                                  (cond ((funcall objectivo? (car estado)) (list (car estado)))
+                                        ((= prof-actual profundidade-maxima) nil)
+                                        ((esta-no-caminho? (car estado) caminho) nil)
+                                        (t
+                                          ;; avancamos recursivamente, em profundidade,
+                                          ;; para cada sucessor
+                                          (let* ((sucs (second estado))
+                                                 (sucs-number (list-length sucs))
+                                                 (suc nil)
+                                                 (solucao nil))
+                                            (when (eql sucs-number 0)
+                                              (return-from procura-prof nil))
+                                            (setf suc (list (first sucs) (sucessores-ordernados (problema-gera-sucessores problema (first sucs)) (problema-heuristica problema))))
+                                            (pop sucs)
+                                            (setf (second estado) sucs)
+                                            (when (> (list-length (second suc)) 0)
+                                              (setf (gethash (1+ prof-actual) estados-gerados) (append (gethash (1+ prof-actual) estados-gerados) (list suc))))
+                                            (setf solucao (procura-prof suc
+                                                                        (cons (car estado) caminho)
+                                                                        (1+ prof-actual)))
+                                            (when solucao
+                                              (return-from procura-prof (cons (car estado) solucao))))))))
+            (looper (estado caminho prof-atual)
+                    (block blabla
+                           (let ((resultado nil)
+                                 (prox-prof (1+ prof-atual)))
+                             ; (format t "ITERACAO ~d~%" iteracao)
+                             (when (= prof-atual 0)
+                               ; (setf estados-gerados (list (cons estado iteracao))))
+                               (setf (gethash prox-prof estados-gerados) (list (list estado (sucessores-ordernados (problema-gera-sucessores problema estado) (problema-heuristica problema))))))
+                             (block main-loop
+                                    (loop
+                                      (when (null (gethash prox-prof estados-gerados))
+                                            (return-from main-loop nil))
+                                      (dolist (estado-gerado (gethash prox-prof estados-gerados))
+                                        (setf resultado (procura-prof estado-gerado caminho prox-prof))
+                                        (when resultado
+                                          (return-from blabla resultado))
+                                        (when (second estado-gerado)
+                                          (push estado-gerado lista-aux)))
+                                       (setf (gethash prox-prof estados-gerados) lista-aux)
+                                       (setf lista-aux nil)))
+                             (looper estado caminho prox-prof)))))
+                             ;))))
+            (looper (problema-estado-inicial problema) nil 0))))
+
 (defun ida*-g004 (problema &key espaco-em-arvore?)
   (let ((estado= (problema-estado= problema))
         (heur (problema-heuristica problema))
@@ -336,6 +394,8 @@
           (sondagem-iterativa problema profundidade-maxima))
          ((string-equal tipo-procura "ilds")
           (ilds problema profundidade-maxima))
+         ((string-equal tipo-procura "dds")
+          (dds problema profundidade-maxima))
          ((string-equal tipo-procura "hill.climbing")
           (hill-climbing problema))
          ((string-equal tipo-procura "tempera")
