@@ -361,13 +361,22 @@
 (defun menor-heuristica (el1 el2)
   (< (cdr el1) (cdr el2)))
 
+(defun inserir-ordenado (elemento lista)
+  (cond ((null lista)
+         (list elemento))
+        ((>= (cdr (car lista)) (cdr elemento))
+         (cons elemento (cons (car lista) (cdr lista))))
+        ((< (cdr (car lista)) (cdr elemento))
+         (cons (car lista) (inserir-ordenado elemento (cdr lista))))))
+
 (defun sucessores-ordernados (sucessores heuristica)
   (let ((heuristicos nil)
         (suc nil))
     (dolist (sucessor sucessores)
       (setf suc (cons sucessor (funcall heuristica sucessor)))
-      (push suc heuristicos))
-    (stable-sort heuristicos #'menor-heuristica)
+      (setf heuristicos (inserir-ordenado suc heuristicos)))
+      ;(push suc heuristicos))
+    ;(stable-sort heuristicos #'menor-heuristica)
     (mapcar 'car heuristicos)))
 
 (defun sucessores-ordernados-heuristica (sucessores heuristica)
@@ -375,8 +384,9 @@
         (suc nil))
     (dolist (sucessor sucessores)
       (setf suc (cons sucessor (funcall heuristica sucessor)))
-      (push suc heuristicos))
-    (stable-sort heuristicos #'menor-heuristica)))
+      (setf heuristicos (inserir-ordenado suc heuristicos)))))
+      ;(push suc heuristicos))
+    ;(stable-sort heuristicos #'menor-heuristica)))
 
 
 (defun schedule (tempo)
@@ -779,8 +789,8 @@
                                   ;(list #'operador)
                                   (list #'reversed-operator)
                                   :objectivo? #'objectivo
-                                  :heuristica #'h1-alt
-                                  :estado= #'compara-estado))
+                                  :heuristica #'h1-alt))
+                                  ;:estado= #'compara-estado))
     (setf caminho (first (procura-g004 problema tipo-procura)))
     ;(passos caminho)))
     (novos-passos caminho caixas homem)))
