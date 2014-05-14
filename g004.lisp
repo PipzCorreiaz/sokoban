@@ -358,8 +358,7 @@
         (suc nil))
     (dolist (sucessor sucessores)
       (setf suc (cons sucessor (funcall heuristica sucessor)))
-      (push suc heuristicos))
-    (sort heuristicos #'menor-heuristica)
+      (setf heuristicos (inserir-ordenado suc heuristicos)))
     (mapcar 'car heuristicos)))
 
 (defun sucessores-ordernados-heuristica (sucessores heuristica)
@@ -367,8 +366,7 @@
         (suc nil))
     (dolist (sucessor sucessores)
       (setf suc (cons sucessor (funcall heuristica sucessor)))
-      (push suc heuristicos))
-    (sort heuristicos #'menor-heuristica)))
+      (setf heuristicos (inserir-ordenado suc heuristicos)))))
 
 
 (defun schedule (tempo)
@@ -376,7 +374,13 @@
 
 
 
-
+(defun inserir-ordenado (elemento lista)
+  (cond ((null lista)
+         (list elemento))
+        ((>= (cdr (car lista)) (cdr elemento))
+         (cons elemento (cons (car lista) (cdr lista))))
+        ((< (cdr (car lista)) (cdr elemento))
+         (cons (car lista) (inserir-ordenado elemento (cdr lista))))))
 
 
 (defun quicksort (l)
@@ -581,8 +585,7 @@
 (defun reversed-operator (estado)
   (let ((novo-estado nil)
         (sucessores nil)
-        (homem (first (second estado)))
-        (aux nil))
+        (homem (first (second estado))))
     (dotimes (i (length (first estado)))
       (let ((caixa (nth i (first estado))))
         (dolist (jogada-caminho (jogadas-muito-validas (first estado) caixa))
@@ -594,16 +597,17 @@
             (setf (nth i (first novo-estado)) proxima-posicao-caixa)
             (if (= (list-length (second estado)) 1)
                 (setf caminho (list (list 999 999)))
-                (setf caminho (reverse (encontra-caminho *mapa* (first estado) (first homem) (second homem) (first jogada) (second jogada)))))
+                (setf caminho (encontra-caminho *mapa* (first estado) (first jogada) (second jogada) (first homem) (second homem))))
             (unless (or (null caminho)
+                        (gethash (sxhash (list (first novo-estado) proxima-posicao-homem)) *todos-estados-gerados*)
                         (player-surrounded? (first novo-estado) proxima-posicao-homem))
               (setf caminho (nconc (copy-list (third jogada-caminho)) (cdr caminho)))
               (setf (second novo-estado) (nconc caminho (cdr (second novo-estado))))
-              (setf aux (cons jogada aux))
+              (setf (gethash (sxhash (list (first novo-estado) proxima-posicao-homem)) *todos-estados-gerados*) t)
               (setf sucessores (cons novo-estado sucessores)))))));)
-    (when (not (gethash (list (sort (first estado) #'list<) (sort aux #'list<)) *todos-estados-gerados*))
-      (setf (gethash (list (first estado) aux) *todos-estados-gerados*) t)
-      sucessores)))
+    ; (when (not (gethash (list (sort (first estado) #'list<) (sort aux #'list<)) *todos-estados-gerados*))
+    ;   (setf (gethash (list (first estado) aux) *todos-estados-gerados*) t)
+      sucessores));)
 
 (defun compara-estado (estado1 estado2)
   (equalp estado1 estado2))
@@ -668,8 +672,8 @@
                                   ;(list #'operador)
                                   (list #'reversed-operator)
                                   :objectivo? #'objectivo
-                                  :heuristica #'h1-alt
-                                  :estado= #'compara-estado))
+                                  :heuristica #'h1-alt))
+                                  ;:estado= #'compara-estado))
     (setf caminho (first (procura-g004 problema tipo-procura)))
     ;(passos caminho)))
     (novos-passos caminho caixas homem)))
