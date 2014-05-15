@@ -1,5 +1,6 @@
 (in-package :user)
 
+(defvar *mapa-normal*)
 (defvar *mapa*)
 (defvar *mapa-cantos*)
 (defvar *todos-estados-gerados* (make-hash-table :test 'equal))
@@ -20,7 +21,32 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defun h1 (estado)
+(defun h1-normal (estado)
+  (let ((caixas (first estado))
+        (destinos (copy-list (mapa-sokoban-destinos *mapa-normal*)))
+        (dist-min 1000)
+        (index-min nil)
+        (index 0)
+        (res 0))
+    (dolist (caixa caixas)
+      (dolist (destino destinos)
+        (let ((dist (+ (abs (- (first caixa)
+                               (first destino)))
+                       (abs (- (second caixa)
+                               (second destino))))))
+          (when (< dist dist-min)
+            (setf dist-min dist)
+            (setf index-min index))
+          (setf index (1+ index))))
+      (setf res (+ res dist-min))
+      (setf destinos (remove-nth destinos index-min))
+      (setf dist-min 1000)
+      (setf index-min nil)
+      (setf index 0))
+    res))
+
+
+(defun h1-reversed (estado)
   (let ((caixas (first estado))
         (destinos (copy-list (mapa-sokoban-destinos *mapa*)))
         (dist-min 1000)
@@ -46,7 +72,20 @@
 
 
 ;conta as adjacentes das caixas que nao estao ja no destino
-(defun h2 (estado)
+(defun h2-normal (estado)
+  (let* ((caixas (first estado))
+         (mapa (mapa-sokoban-mapa *mapa-normal*))
+         (ocupadas (coloca-caixotes (mapa-sokoban-mapa-aux *mapa-normal*) caixas))
+         (num-caixas (list-length caixas))
+         (destinos (mapa-sokoban-destinos *mapa-normal*))
+         (res 0))
+    (dolist (caixa caixas)
+      (if (destino? destinos (first caixa) (second caixa))
+          (setf num-caixas (1- num-caixas))
+          (setf res (+ res (list-length (jogadas-validas2 mapa ocupadas (first caixa) (second caixa)))))))
+    (- (* 4 num-caixas) res)))
+
+(defun h2-reversed (estado)
   (let* ((caixas (first estado))
          (mapa (mapa-sokoban-mapa *mapa*))
          (ocupadas (coloca-caixotes (mapa-sokoban-mapa-aux *mapa*) caixas))
@@ -67,13 +106,13 @@
 
 (defun 1-samp (problema profundidade-maxima)
   "Algoritmo de procura em profundidade primeiro."
-
+  
   (let ((estado= (problema-estado= problema))
         (objectivo? (problema-objectivo? problema)))
-
+    
     (labels ((esta-no-caminho? (estado caminho)
                                (member estado caminho :test estado=))
-
+             
              (procura-prof (estado caminho prof-actual)
                            (cond ((funcall objectivo? estado) (list estado))
                                  ((= prof-actual profundidade-maxima) nil)
@@ -93,7 +132,7 @@
                                                                  (1+ prof-actual)))
                                      (when solucao
                                        (cons estado solucao)))))))
-
+            
             (procura-prof (problema-estado-inicial problema) nil 0))))
 
 (defun sondagem-iterativa (problema profundidade-maxima)
@@ -105,12 +144,12 @@
 
 (defun ilds (problema profundidade-maxima)
   "Algoritmo de procura em profundidade primeiro."
-
+  
   (let ((estado= (problema-estado= problema))
         (objectivo? (problema-objectivo? problema))
         (estados-gerados nil)
         (estados-gerados-importantes nil))
-
+    
     (labels ((esta-no-caminho? (estado caminho)
                                (member estado caminho :test estado=))
              (procura-prof (estado caminho prof-actual iteracao)
@@ -139,32 +178,28 @@
                                                                         iteracao))
                                             (when solucao
                                               (return-from procura-prof (cons (car estado) solucao))))))))
-            (looper (estado caminho prof-atual iteracao)
-                    (block blabla
-                           (let ((resultado nil))
-                             ; (format t "ITERACAO ~d~%" iteracao)
-                             (when (and (= iteracao 0) (null estados-gerados))
-                               ; (setf estados-gerados (list (cons estado iteracao))))
-                               (setf estados-gerados (list (list estado (sucessores-ordernados (problema-gera-sucessores problema estado) (problema-heuristica problema))))))
-                             (dolist (estado-gerado estados-gerados)
-                               (setf resultado (procura-prof estado-gerado caminho prof-atual iteracao))
-                               (when resultado
-                                 (return-from blabla resultado)))
-                             (setf estados-gerados estados-gerados-importantes)
-                             ; (format t "ESTADOS-GERADOS: ~A~%~%~%" estados-gerados)
-                             (setf estados-gerados-importantes nil)
-                             (looper estado caminho prof-atual (1+ iteracao))))))
-                             ;))))
+             (looper (estado caminho prof-atual iteracao)
+                     (block blabla
+                            (let ((resultado nil))
+                              (when (and (= iteracao 0) (null estados-gerados))
+                                (setf estados-gerados (list (list estado (sucessores-ordernados (problema-gera-sucessores problema estado) (problema-heuristica problema))))))
+                              (dolist (estado-gerado estados-gerados)
+                                (setf resultado (procura-prof estado-gerado caminho prof-atual iteracao))
+                                (when resultado
+                                  (return-from blabla resultado)))
+                              (setf estados-gerados estados-gerados-importantes)
+                              (setf estados-gerados-importantes nil)
+                              (looper estado caminho prof-atual (1+ iteracao))))))
             (looper (problema-estado-inicial problema) nil 0 0))))
 
 (defun dds (problema profundidade-maxima)
   "Algoritmo de procura em profundidade primeiro."
-
+  
   (let ((estado= (problema-estado= problema))
         (objectivo? (problema-objectivo? problema))
         (estados-gerados (make-hash-table))
         (lista-aux nil))
-
+    
     (labels ((esta-no-caminho? (estado caminho)
                                (member estado caminho :test estado=))
              (procura-prof (estado caminho prof-actual)
@@ -191,28 +226,25 @@
                                                                         (1+ prof-actual)))
                                             (when solucao
                                               (return-from procura-prof (cons (car estado) solucao))))))))
-            (looper (estado caminho prof-atual)
-                    (block blabla
-                           (let ((resultado nil)
-                                 (prox-prof (1+ prof-atual)))
-                             ; (format t "ITERACAO ~d~%" iteracao)
-                             (when (= prof-atual 0)
-                               ; (setf estados-gerados (list (cons estado iteracao))))
-                               (setf (gethash prox-prof estados-gerados) (list (list estado (sucessores-ordernados (problema-gera-sucessores problema estado) (problema-heuristica problema))))))
-                             (block main-loop
-                                    (loop
-                                      (when (null (gethash prox-prof estados-gerados))
-                                            (return-from main-loop nil))
-                                      (dolist (estado-gerado (gethash prox-prof estados-gerados))
-                                        (setf resultado (procura-prof estado-gerado caminho prox-prof))
-                                        (when resultado
-                                          (return-from blabla resultado))
-                                        (when (second estado-gerado)
-                                          (push estado-gerado lista-aux)))
+             (looper (estado caminho prof-atual)
+                     (block blabla
+                            (let ((resultado nil)
+                                  (prox-prof (1+ prof-atual)))
+                              (when (= prof-atual 0)
+                                (setf (gethash prox-prof estados-gerados) (list (list estado (sucessores-ordernados (problema-gera-sucessores problema estado) (problema-heuristica problema))))))
+                              (block main-loop
+                                     (loop
+                                       (when (null (gethash prox-prof estados-gerados))
+                                         (return-from main-loop nil))
+                                       (dolist (estado-gerado (gethash prox-prof estados-gerados))
+                                         (setf resultado (procura-prof estado-gerado caminho prox-prof))
+                                         (when resultado
+                                           (return-from blabla resultado))
+                                         (when (second estado-gerado)
+                                           (push estado-gerado lista-aux)))
                                        (setf (gethash prox-prof estados-gerados) lista-aux)
                                        (setf lista-aux nil)))
-                             (looper estado caminho prox-prof)))))
-                             ;))))
+                              (looper estado caminho prox-prof)))))
             (looper (problema-estado-inicial problema) nil 0))))
 
 (defun ida*-g004 (problema &key espaco-em-arvore?)
@@ -220,11 +252,11 @@
         (heur (problema-heuristica problema))
         (fun-custo (problema-custo problema))
         (objectivo? (problema-objectivo? problema)))
-
+    
     (labels ((esta-no-caminho? (estado caminho)
                                (unless espaco-em-arvore?
                                  (member estado caminho :test estado=)))
-
+             
              (prof (estado custo-max custo-caminho caminho)
                    (block prof
                           (if (esta-no-caminho? estado caminho)
@@ -250,7 +282,7 @@
                                                       (return-from prof (cons estado
                                                                               solucao))))))
                                           min-custo))))))))
-
+            
             (let ((custo-max 0))
               (loop
                 (setf *todos-estados-gerados* (make-hash-table :test 'equal))
@@ -265,57 +297,57 @@
                       (return solucao))))))))
 
 (defun procura-g004 (problema tipo-procura
-        &key (profundidade-maxima most-positive-fixnum)
-             (espaco-em-arvore? nil))
+                              &key (profundidade-maxima most-positive-fixnum)
+                              (espaco-em-arvore? nil))
   "Dado um problema e um tipo de procura devolve uma lista com: a
   solucao para o problema (a lista de estados desde o estado inicial
   ate' ao estado final), ou nil caso nao encontre a solucao; tempo
   gasto na procura (em internal-time-units); numero de nos expandidos;
   numero de nos gerados."
-
+  
   (flet ((faz-a-procura (problema tipo-procura
-             profundidade-maxima espaco-em-arvore?)
-       ;; Usamos cond em vez de case porque nao sabemos de que
-       ;; package veem os simbolos (o string-equal funciona com o
-       ;; symbol-name do simbolo e e' "case-insensitive")
-
-       ;; Actualmente, apenas a procura em largura, o A* e o IDA*
-       ;; estao a aproveitar a informacao do espaco de estados ser
-       ;; uma arvore
-       (cond ((string-equal tipo-procura "largura")
-          (largura-primeiro problema
-                    :espaco-em-arvore? espaco-em-arvore?))
-         ((string-equal tipo-procura "profundidade")
-          (profundidade-primeiro problema profundidade-maxima))
-         ((string-equal tipo-procura "1-samp")
-          (1-samp problema profundidade-maxima))
-         ((string-equal tipo-procura "sondagem.iterativa")
-          (sondagem-iterativa problema profundidade-maxima))
-         ((string-equal tipo-procura "ilds")
-          (ilds problema profundidade-maxima))
-         ((string-equal tipo-procura "dds")
-          (dds problema profundidade-maxima))
-         ((string-equal tipo-procura "hill.climbing")
-          (hill-climbing problema))
-         ((string-equal tipo-procura "tempera")
-          (tempera-simulada problema))
-         ((string-equal tipo-procura "profundidade-iterativa")
-          (profundidade-iterativa problema profundidade-maxima))
-         ((string-equal tipo-procura "a*")
-          (a* problema :espaco-em-arvore? espaco-em-arvore?))
-         ((string-equal tipo-procura "ida*")
-          (ida*-g004 problema :espaco-em-arvore? espaco-em-arvore?)))))
-
-    (let ((*nos-gerados* 0)
-      (*nos-expandidos* 0)
-      (tempo-inicio (get-internal-run-time)))
-      (let ((solucao (faz-a-procura problema tipo-procura
-                    profundidade-maxima
-                    espaco-em-arvore?)))
-    (list solucao
-          (- (get-internal-run-time) tempo-inicio)
-          *nos-expandidos*
-          *nos-gerados*)))))
+                                  profundidade-maxima espaco-em-arvore?)
+                        ;; Usamos cond em vez de case porque nao sabemos de que
+                        ;; package veem os simbolos (o string-equal funciona com o
+                        ;; symbol-name do simbolo e e' "case-insensitive")
+                        
+                        ;; Actualmente, apenas a procura em largura, o A* e o IDA*
+                        ;; estao a aproveitar a informacao do espaco de estados ser
+                        ;; uma arvore
+                        (cond ((string-equal tipo-procura "largura")
+                               (largura-primeiro problema
+                                                 :espaco-em-arvore? espaco-em-arvore?))
+                              ((string-equal tipo-procura "profundidade")
+                               (profundidade-primeiro problema profundidade-maxima))
+                              ((string-equal tipo-procura "1-samp")
+                               (1-samp problema profundidade-maxima))
+                              ((string-equal tipo-procura "sondagem.iterativa")
+                               (sondagem-iterativa problema profundidade-maxima))
+                              ((string-equal tipo-procura "ilds")
+                               (ilds problema profundidade-maxima))
+                              ((string-equal tipo-procura "dds")
+                               (dds problema profundidade-maxima))
+                              ((string-equal tipo-procura "hill.climbing")
+                               (hill-climbing problema))
+                              ((string-equal tipo-procura "tempera")
+                               (tempera-simulada problema))
+                              ((string-equal tipo-procura "profundidade-iterativa")
+                               (profundidade-iterativa problema profundidade-maxima))
+                              ((string-equal tipo-procura "a*")
+                               (a* problema :espaco-em-arvore? espaco-em-arvore?))
+                              ((string-equal tipo-procura "ida*")
+                               (ida*-g004 problema :espaco-em-arvore? espaco-em-arvore?)))))
+        
+        (let ((*nos-gerados* 0)
+              (*nos-expandidos* 0)
+              (tempo-inicio (get-internal-run-time)))
+          (let ((solucao (faz-a-procura problema tipo-procura
+                                        profundidade-maxima
+                                        espaco-em-arvore?)))
+            (list solucao
+                  (- (get-internal-run-time) tempo-inicio)
+                  *nos-expandidos*
+                  *nos-gerados*)))))
 
 (defun menor-heuristica (el1 el2)
   (< (cdr el1) (cdr el2)))
@@ -334,7 +366,7 @@
     (dolist (sucessor sucessores)
       (setf suc (cons sucessor (funcall heuristica sucessor)))
       (setf heuristicos (inserir-ordenado suc heuristicos)))
-      ;(push suc heuristicos))
+    ;(push suc heuristicos))
     ;(stable-sort heuristicos #'menor-heuristica)
     (mapcar 'car heuristicos)))
 
@@ -344,8 +376,8 @@
     (dolist (sucessor sucessores)
       (setf suc (cons sucessor (funcall heuristica sucessor)))
       (setf heuristicos (inserir-ordenado suc heuristicos)))))
-      ;(push suc heuristicos))
-    ;(stable-sort heuristicos #'menor-heuristica)))
+;(push suc heuristicos))
+;(stable-sort heuristicos #'menor-heuristica)))
 
 
 (defun schedule (tempo)
@@ -381,7 +413,7 @@
                (setf intervalo (- (cdr estado-atual) (cdr estado-seguinte)))
                (when (or (> intervalo 0) (< (expt e (/ intervalo tt)) (- 1 (random 2))))
                  (setf estado-atual estado-seguinte)))
-
+             
              (when (null sucessores)
                (return-from cicle estado-atual))))))
 
@@ -390,48 +422,70 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun passos (caminho)
-	(reverse (second (first (last caminho)))))
-
+  (reverse (second (first (last caminho)))))
 
 
 (defun objectivo (estado)
+  (let* ((mapa *mapa-normal*)
+         (caixotes (first estado))
+         (posicoes-certas 0))
+    (dotimes (i (list-length caixotes))
+      (dolist (p caixotes)
+        (when (equal p (nth i (mapa-sokoban-destinos mapa)))
+          (incf posicoes-certas))))
+    (= posicoes-certas (list-length caixotes))))
+
+
+
+(defun objectivo-reversed (estado)
   (let* ((mapa *mapa*)
          (caixotes (first estado))
          (homem (first (second estado)))
          (posicoes-certas 0))
     (when (ha-caminho *mapa* *posicoes-caixas-originais* (first *posicao-homem-original*) (second *posicao-homem-original*)
-                        (first homem) (second homem))
+                      (first homem) (second homem))
       (dotimes (i (list-length caixotes))
         (dolist (p caixotes)
           (when (equal p (nth i (mapa-sokoban-destinos mapa)))
             (incf posicoes-certas))))
       (= posicoes-certas (list-length caixotes)))))
 
+
+(defun copy-structure-sokoban (mapa)
+  (let ((copy (make-mapa-sokoban)))
+    (setf (mapa-sokoban-mapa copy) (copy-array (mapa-sokoban-mapa mapa)))
+    (setf (mapa-sokoban-destinos copy) (copy-list (mapa-sokoban-destinos mapa)))
+    (setf (mapa-sokoban-mapa-aux copy) (copy-array (mapa-sokoban-mapa-aux mapa)))
+    (setf (mapa-sokoban-nlinhas copy) (mapa-sokoban-nlinhas mapa))
+    (setf (mapa-sokoban-ncolunas copy) (mapa-sokoban-ncolunas mapa))
+    copy))
+
+
 (defun copy-estado (estado)
-	(let ((caixas (copy-list (first estado)))
+  (let ((caixas (copy-list (first estado)))
         (pos (copy-list (second estado))))
-      (list caixas pos)))
+    (list caixas pos)))
 
 
 (defun jogadas-validas3 (mapa ocupadas x y)
   (let ((res nil))
     (unless (or (aref mapa (1+ x) y) (aref ocupadas (1+ x) y) (aref mapa (1- x) y) (aref ocupadas (1- x) y))
-    	(push (list (1+ x) y) res)
-    	(push (list (1- x) y) res))
+      (push (list (1+ x) y) res)
+      (push (list (1- x) y) res))
     (unless (or (aref mapa x (1+ y)) (aref ocupadas x (1+ y)) (aref mapa x (1- y)) (aref ocupadas x (1- y)))
-    	(push (list x (1+ y)) res)
-    	(push (list x (1- y)) res))
+      (push (list x (1+ y)) res)
+      (push (list x (1- y)) res))
     res))
 
 (defun destino? (destinos x y)
-  	(member (list x y) destinos :test #'equalp))
+  (member (list x y) destinos :test #'equalp))
 
 (defun vertical-freeze-deadlock? (x y ocupadas)
   (let ((res nil))
-    (when (destino? (mapa-sokoban-destinos *mapa*) x y)
+    (when (destino? (mapa-sokoban-destinos *mapa-normal*) x y)
       (return-from vertical-freeze-deadlock? nil))
-    (setf res (or (casa-ocupada *mapa* (1+ x) y)
-                  (casa-ocupada *mapa* (1- x) y)
+    (setf res (or (casa-ocupada *mapa-normal* (1+ x) y)
+                  (casa-ocupada *mapa-normal* (1- x) y)
                   (and (corner-deadlock? (list (1+ x) y))
                        (corner-deadlock? (list (1- x) y)))))
     (when (not res)
@@ -443,10 +497,10 @@
 
 (defun horizontal-freeze-deadlock? (x y ocupadas)
   (let ((res nil))
-    (when (destino? (mapa-sokoban-destinos *mapa*) x y)
+    (when (destino? (mapa-sokoban-destinos *mapa-normal*) x y)
       (return-from horizontal-freeze-deadlock? nil))
-    (setf res (or (casa-ocupada *mapa* x (1+ y))
-                  (casa-ocupada *mapa* x (1- y))
+    (setf res (or (casa-ocupada *mapa-normal* x (1+ y))
+                  (casa-ocupada *mapa-normal* x (1- y))
                   (and (corner-deadlock? (list x (1+ y)))
                        (corner-deadlock? (list x (1- y))))))
     (when (not res)
@@ -475,7 +529,7 @@
          (parede1 nil)
          (parede2 nil)
          (caminho nil)
-         (destinos (mapa-sokoban-destinos *mapa*)))
+         (destinos (mapa-sokoban-destinos *mapa-normal*)))
     (if (eq (cadr caixa) (cadr homem))
         (loop
           (let ((next-pos (+ (car caixa) (* i diff-l))))
@@ -551,7 +605,7 @@
 
 
 (defun operador (estado)
-  (let* ((mapa *mapa*)
+  (let* ((mapa *mapa-normal*)
          (novo-estado nil)
          (proxima-posicao nil)
          (sucessores nil)
@@ -624,15 +678,15 @@
       (setf *parents* (1+ *parents*)))
     sucessores))
 
-(defun compara-estado (estado1 estado2)
-  (let ((caixas-1 (first estado1))
-        (caixas-2 (first estado2))
-        (homem-1 (first (second estado1)))
-        (homem-2 (first (second estado2))))
-    (dolist (caixa caixas-1)
-      (when (not (member caixa caixas-2 :test #'equal))
-        (return-from compara-estado nil)))
-    (ha-caminho *mapa* caixas-1 (first homem-1) (second homem-1) (first homem-2) (second homem-2))))
+; (defun compara-estado (estado1 estado2)
+;   (let ((caixas-1 (first estado1))
+;         (caixas-2 (first estado2))
+;         (homem-1 (first (second estado1)))
+;         (homem-2 (first (second estado2))))
+;     (dolist (caixa caixas-1)
+;       (when (not (member caixa caixas-2 :test #'equal))
+;         (return-from compara-estado nil)))
+;     (ha-caminho *mapa* caixas-1 (first homem-1) (second homem-1) (first homem-2) (second homem-2))))
 
 (defun compara-posicoes-caixas (estado1 estado2)
   (equalp (car estado1) (car estado2)))
@@ -651,11 +705,12 @@
                 (append (quicksort smaller) (list (first l)) (quicksort bigger))))))
 
 
-(defun elimina-cantos (mapa)
-  (let ((linhas (mapa-sokoban-nlinhas *mapa*))
-        (colunas (mapa-sokoban-ncolunas *mapa*))
-        (destinos (mapa-sokoban-destinos *mapa*))
-        (novo-mapa (copy-array mapa)))
+(defun elimina-cantos (estrutura)
+  (let* ((mapa (mapa-sokoban-mapa estrutura))
+         (linhas (mapa-sokoban-nlinhas estrutura))
+         (colunas (mapa-sokoban-ncolunas estrutura))
+         (destinos (mapa-sokoban-destinos estrutura))
+         (novo-mapa (copy-array mapa)))
     (dotimes (i linhas novo-mapa)
       (dotimes (j colunas)
         (when (and (> i 0) (> j 0) (< j (- colunas 1)) (< i (- linhas 1)))
@@ -681,50 +736,61 @@
 
 (defun resolve-sokoban (filename tipo-procura)
   (let* ((estado-inicial (parse-ficheiro filename))
+         (estado-inicial-reversed nil)
          (problema nil)
+         (problema-reversed nil)
          (destinos nil)
          (caixas nil)
          (homem nil)
          (caminho nil)
          (procura nil)
          (resultado nil))
+    
     (setf *parents* 0.0)
     (setf *children* 0.0)
     (setf *todos-estados-gerados* (make-hash-table :test 'equal))
+    (setf *mapa-normal* (copy-structure-sokoban (first estado-inicial)))
     (setf *mapa* (first estado-inicial))
-    (setf destinos (copy-list (mapa-sokoban-destinos *mapa*)))
+    (setf *mapa-cantos* (elimina-cantos *mapa-normal*))
+    
+    (setf destinos (copy-list (mapa-sokoban-destinos *mapa*))) 
     (setf caixas (copy-list (second estado-inicial)))
     (setf homem (copy-list (third estado-inicial)))
     (setf *posicoes-caixas-originais* caixas)
-    (setf *posicao-homem-original* homem)
-    (setf (mapa-sokoban-destinos *mapa*) caixas)
-    (setf (second estado-inicial) destinos)
-    ;(setf (third estado-inicial) nil)
-    (setf *mapa-cantos* (elimina-cantos (mapa-sokoban-mapa *mapa*)))
+    (setf *posicao-homem-original* homem) 
+    
     (setf estado-inicial (cdr estado-inicial))
     (setf (second estado-inicial) (list (second estado-inicial)))
+    (setf estado-inicial-reversed (copy-list estado-inicial))
+    (setf (mapa-sokoban-destinos *mapa*) caixas)
+    (setf (first estado-inicial-reversed) destinos)
+    
     (setf problema (cria-problema estado-inicial
-                                  ;(list #'operador)
-                                  (list #'reversed-operator)
+                                  (list #'operador)
                                   :objectivo? #'objectivo
-                                  :heuristica #'h2))
-                                  ;:estado= #'compara-estado))
+                                  :heuristica #'h1-normal))
+    ; (setf problema-reversed (cria-problema estado-inicial-reversed
+    ;            
+    ;                               :objectivo? #'objectivo-reversed
+    ;                               :heuristica #'h1-reversed))
+    ;(setf procura (procura-g004 problema-reversed tipo-procura))
     (setf procura (procura-g004 problema tipo-procura))
     (setf caminho (first procura))
-    ;(passos caminho)))
-    (setf resultado (novos-passos caminho caixas homem))
-    (format t "============================
-  NÓS EXPANDIDOS: ~A
-  NÓS GERADOS: ~A
-  PROFUNDIDADE ATINGIDA: ~A
-  CUSTO: ~A
-  FACT. MÉD. RAMIFIC.: ~A
-============================~%"
-               (third procura)
-               (fourth procura)
-               (list-length (first procura))
-               (list-length resultado)
-               (/ *children* *parents*))
+    ;(setf resultado (novos-passos caminho caixas homem))
+    (setf resultado (passos caminho))
+    
+    ;     (format t "============================
+    ;   NÓS EXPANDIDOS: ~A
+    ;   NÓS GERADOS: ~A
+    ;   PROFUNDIDADE ATINGIDA: ~A
+    ;   CUSTO: ~A
+    ;   FACT. MÉD. RAMIFIC.: ~A
+    ; ============================~%"
+    ;                (third procura)
+    ;                (fourth procura)
+    ;                (list-length (first procura))
+    ;                (list-length resultado)
+    ;                (/ *children* *parents*))
     resultado))
 
 
