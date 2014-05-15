@@ -19,32 +19,8 @@
 ;;            HEURISTICAS             ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;soma as distancias de cada caixa em linha recta ate ao destino mais perto
-(defun h1 (estado)
-  (let ((caixas (first estado))
-        (destinos (copy-list (mapa-sokoban-destinos *mapa*)))
-        (dist-min 1000)
-        (index-min nil)
-        (index 0)
-        (res 0))
-    (dolist (caixa caixas)
-      (dolist (destino destinos)
-        (let ((dist (sqrt (+ (expt (- (first caixa)
-                                      (first destino)) 2)
-                             (expt (- (second caixa)
-                                      (second destino)) 2)))))
-          (when (< dist dist-min)
-            (setf dist-min dist)
-            (setf index-min index))
-          (setf index (1+ index))))
-      (setf res (+ res dist-min))
-      (setf destinos (remove-nth destinos index-min))
-      (setf dist-min 1000)
-      (setf index-min nil)
-      (setf index 0))
-    res))
 
-(defun h1-alt (estado)
+(defun h1 (estado)
   (let ((caixas (first estado))
         (destinos (copy-list (mapa-sokoban-destinos *mapa*)))
         (dist-min 1000)
@@ -68,101 +44,22 @@
       (setf index 0))
     res))
 
-;soma as distancias de cada caixa dadas pelo encontra-caminho ate ao destino mais perto
+
+;conta as adjacentes das caixas que nao estao ja no destino
 (defun h2 (estado)
-  (let ((caixas (first estado))
-        (destinos (copy-list (mapa-sokoban-destinos *mapa*)))
-        (dist-min 1000)
-        (index-min nil)
-        (index 0)
-        (res 0))
-    (dolist (caixa caixas)
-      (dolist (destino destinos)
-        (let ((dist (length (encontra-caminho *mapa* caixas (first caixa) (second caixa) (first destino) (second destino)))))
-          (when (= dist 0)
-            (setf dist 999))
-          (when (< dist dist-min)
-            (setf dist-min dist)
-            (setf index-min index))
-          (setf index (1+ index))))
-      (setf res (+ res dist-min))
-      (setf destinos (remove-nth destinos index-min))
-      (setf dist-min 1000)
-      (setf index-min nil)
-      (setf index 0))
-    res))
-
-
-;distancia mais curta da caixa dada pelo encontra-caminho ate ao destino mais perto
-(defun h3 (estado)
-  (let ((caixas (first estado))
-        (destinos (mapa-sokoban-destinos *mapa*))
-        (dist-min 1000))
-    (dolist (caixa caixas)
-      (dolist (destino destinos)
-        (let ((dist (length (encontra-caminho *mapa* caixas (first caixa) (second caixa) (first destino) (second destino)))))
-          (when (= dist 0)
-            (setf dist 999))
-          (when (< dist dist-min)
-            (setf dist-min dist)))))
-    dist-min))
-
-
-;numero de caixas acessiveis pelo homem com caminho ate ao destino
-(defun h4 (estado)
-  (let* ((caixas (first estado))
-         (destinos (mapa-sokoban-destinos *mapa*))
-         (homem (first (second estado)))
-         (mapa (mapa-sokoban-mapa *mapa*))
-         (mapa-aux (mapa-sokoban-mapa-aux *mapa*))
-         (ocupadas (coloca-caixotes mapa-aux caixas))
-         (contador 0))
-    (dolist (caixa caixas)
-      (when (not (member caixa destinos :test #'equalp))
-        (dolist (adjacente (jogadas-validas3 mapa ocupadas (first caixa) (second caixa)))
-          (when (ha-caminho *mapa* caixas (first homem) (second homem) (first adjacente) (second adjacente))
-            (block encontra-destinos
-                   (dolist (destino destinos)
-                     (when (ha-caminho *mapa* caixas (first caixa) (second caixa) (first destino) (second destino))
-                       (return-from encontra-destinos (incf contador)))))))))
-    (- 1000 contador)))
-
-
-;conta as adjacentes das caixas
-(defun h5 (estado)
   (let* ((caixas (first estado))
          (mapa (mapa-sokoban-mapa *mapa*))
          (ocupadas (coloca-caixotes (mapa-sokoban-mapa-aux *mapa*) caixas))
-         (num-caixas (length caixas))
+         (num-caixas (list-length caixas))
+         (destinos (mapa-sokoban-destinos *mapa*))
          (res 0))
     (dolist (caixa caixas)
-      (setf res (+ res (length (jogadas-validas3 mapa ocupadas (first caixa) (second caixa))))))
+      (if (destino? destinos (first caixa) (second caixa))
+          (setf num-caixas (1- num-caixas))
+          (setf res (+ res (list-length (jogadas-validas2 mapa ocupadas (first caixa) (second caixa)))))))
     (- (* 4 num-caixas) res)))
 
 
-;numero de caixas que tem caminho ate um destino
-(defun h6 (estado)
-  (let ((caixas (first estado))
-        (destinos (mapa-sokoban-destinos *mapa*))
-        (res 0))
-    (dolist (caixa caixas)
-      (block encontra-dest-acessivel
-             (dolist (destino destinos)
-               (when (ha-caminho *mapa* caixas (first caixa) (second caixa) (first destino) (second destino))
-                 (incf res)
-                 (return-from encontra-dest-acessivel)))))
-    (- (length caixas) res)))
-
-
-;numero de caixas acessiveis pelo homem
-(defun h7 (estado)
-  (let ((caixas (first estado))
-        (homem (first (second estado)))
-        (res 0))
-    (dolist (caixa caixas)
-      (when (ha-caminho *mapa* caixas (first homem) (second homem) (first caixa) (second caixa))
-        (incf res)))
-    (- (length caixas) res)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;              PROCURAS              ;;
@@ -504,11 +401,11 @@
          (posicoes-certas 0))
     (when (ha-caminho *mapa* *posicoes-caixas-originais* (first *posicao-homem-original*) (second *posicao-homem-original*)
                         (first homem) (second homem))
-      (dotimes (i (length caixotes))
+      (dotimes (i (list-length caixotes))
         (dolist (p caixotes)
           (when (equal p (nth i (mapa-sokoban-destinos mapa)))
             (incf posicoes-certas))))
-      (= posicoes-certas (length caixotes)))))
+      (= posicoes-certas (list-length caixotes)))))
 
 (defun copy-estado (estado)
 	(let ((caixas (copy-list (first estado)))
@@ -659,7 +556,7 @@
          (proxima-posicao nil)
          (sucessores nil)
          (homem (first (second estado))))
-    (dotimes (i (length (first estado)))
+    (dotimes (i (list-length (first estado)))
       (let ((caixa (nth i (first estado)))
             (caminho nil)
             (ocupadas (coloca-caixotes (limpa-mapa-aux mapa) (first estado))))
@@ -693,7 +590,7 @@
         (pos-diff nil)
         (proxima-posicao-homem nil)
         (filhos 0))
-    (dotimes (i (length (first estado)))
+    (dotimes (i (list-length (first estado)))
       (let ((caminho nil)
             (caixa (nth i (first estado)))
             (ocupadas (coloca-caixotes (limpa-mapa-aux *mapa*) (first estado))))
@@ -810,7 +707,7 @@
                                   ;(list #'operador)
                                   (list #'reversed-operator)
                                   :objectivo? #'objectivo
-                                  :heuristica #'h1-alt))
+                                  :heuristica #'h2))
                                   ;:estado= #'compara-estado))
     (setf procura (procura-g004 problema tipo-procura))
     (setf caminho (first procura))
