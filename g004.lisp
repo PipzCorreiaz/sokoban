@@ -105,13 +105,13 @@
 
 (defun 1-samp (problema profundidade-maxima)
   "Algoritmo de procura em profundidade primeiro."
-  
+
   (let ((estado= (problema-estado= problema))
         (objectivo? (problema-objectivo? problema)))
-    
+
     (labels ((esta-no-caminho? (estado caminho)
                                (member estado caminho :test estado=))
-             
+
              (procura-prof (estado caminho prof-actual)
                            (cond ((funcall objectivo? estado) (list estado))
                                  ((= prof-actual profundidade-maxima) nil)
@@ -131,7 +131,7 @@
                                                                  (1+ prof-actual)))
                                      (when solucao
                                        (cons estado solucao)))))))
-            
+
             (procura-prof (problema-estado-inicial problema) nil 0))))
 
 (defun sondagem-iterativa (problema profundidade-maxima)
@@ -143,12 +143,12 @@
 
 (defun ilds (problema profundidade-maxima)
   "Algoritmo de procura em profundidade primeiro."
-  
+
   (let ((estado= (problema-estado= problema))
         (objectivo? (problema-objectivo? problema))
         (estados-gerados nil)
         (estados-gerados-importantes nil))
-    
+
     (labels ((esta-no-caminho? (estado caminho)
                                (member estado caminho :test estado=))
              (procura-prof (estado caminho prof-actual iteracao)
@@ -199,7 +199,7 @@
       (when (and (equal (first r) (first estado))
                  (ha-caminho *mapa-reversed* (first r) (first homem1) (second homem1) (first homem2) (second homem2)))
         (return-from birectional-matcht? r)))))
-    
+
 
 
 (defun bidirectional (problema-normal problema-reversed)
@@ -220,7 +220,7 @@
                                                             (problema-heuristica problema-normal)))
                 (when *bidirectional-match*
                   (return-from bidirectional *bidirectional-match*))))
-            
+
             (when (not (null estados-reversed))
               (let ((estado (first estados-reversed))
                     (objectivo? (problema-objectivo? problema-reversed)))
@@ -234,12 +234,12 @@
 
 (defun dds (problema profundidade-maxima)
   "Algoritmo de procura em profundidade primeiro."
-  
+
   (let ((estado= (problema-estado= problema))
         (objectivo? (problema-objectivo? problema))
         (estados-gerados (make-hash-table))
         (lista-aux nil))
-    
+
     (labels ((esta-no-caminho? (estado caminho)
                                (member estado caminho :test estado=))
              (procura-prof (estado caminho prof-actual)
@@ -292,11 +292,11 @@
         (heur (problema-heuristica problema))
         (fun-custo (problema-custo problema))
         (objectivo? (problema-objectivo? problema)))
-    
+
     (labels ((esta-no-caminho? (estado caminho)
                                (unless espaco-em-arvore?
                                  (member estado caminho :test estado=)))
-             
+
              (prof (estado custo-max custo-caminho caminho)
                    (block prof
                           (if (esta-no-caminho? estado caminho)
@@ -322,7 +322,7 @@
                                                       (return-from prof (cons estado
                                                                               solucao))))))
                                           min-custo))))))))
-            
+
             (let ((custo-max 0))
               (loop
                 (setf *estados-gerados-reversed* (make-hash-table :test 'equal))
@@ -401,7 +401,7 @@
                (setf intervalo (- (cdr estado-atual) (cdr estado-seguinte)))
                (when (or (> intervalo 0) (< (expt e (/ intervalo tt)) (- 1 (random 2))))
                  (setf estado-atual estado-seguinte)))
-             
+
              (when (null sucessores)
                (return-from cicle estado-atual))))))
 
@@ -773,11 +773,12 @@
 (defun resolve-sokoban (filename tipo-procura
                                  &key (profundidade-maxima most-positive-fixnum)
                                  (espaco-em-arvore? nil))
-  
+
   (flet ((faz-a-procura (problema tipo-procura
                                   profundidade-maxima espaco-em-arvore?
                                   &key (problema-normal nil))
-                        (cond ((and (string-equal tipo-procura "bidirectional") (not (null problema-normal)))
+                        (cond ((and (or (string-equal tipo-procura "bidirectional")
+                                        (string-equal tipo-procura "melhor.abordagem")) (not (null problema-normal)))
                                (bidirectional problema-normal problema))
                               ((string-equal tipo-procura "largura")
                                (largura-primeiro problema :espaco-em-arvore? espaco-em-arvore?))
@@ -787,9 +788,10 @@
                                (1-samp problema profundidade-maxima))
                               ((string-equal tipo-procura "sondagem.iterativa")
                                (sondagem-iterativa problema profundidade-maxima))
-                              ((string-equal tipo-procura "ilds")
+                              ((string-equal tipo-procura "ILDS")
                                (ilds problema profundidade-maxima))
-                              ((string-equal tipo-procura "dds")
+                              ((or (string-equal tipo-procura "dds")
+                                  (string-equal tipo-procura "abordagem.alternativa"))
                                (dds problema profundidade-maxima))
                               ((string-equal tipo-procura "hill.climbing")
                                (hill-climbing problema))
@@ -797,11 +799,16 @@
                                (tempera-simulada problema))
                               ((string-equal tipo-procura "profundidade-iterativa")
                                (profundidade-iterativa problema profundidade-maxima))
-                              ((string-equal tipo-procura "a*")
+                              ((or (string-equal tipo-procura "a*")
+                                  (string-equal tipo-procura "a*.melhor.heuristica"))
+                               (setf (problema-heuristica problema) #'h1-reversed)
+                               (a* problema :espaco-em-arvore? espaco-em-arvore?))
+                              ((string-equal tipo-procura "a*.melhor.heuristica.alternativa")
+                               (setf (problema-heuristica problema) #'h2-reversed)
                                (a* problema :espaco-em-arvore? espaco-em-arvore?))
                               ((string-equal tipo-procura "ida*")
                                (ida*-g004 problema :espaco-em-arvore? espaco-em-arvore?)))))
-        
+
         (let* ((*nos-gerados* 0)
                (*nos-expandidos* 0)
                (estado-inicial (parse-ficheiro filename))
@@ -813,7 +820,7 @@
                (homem nil)
                (caminho nil)
                (resultado nil))
-          
+
           (setf *parents* 0.0)
           (setf *children* 0.0)
           (setf *estados-gerados-normal* (make-hash-table :test 'equal))
@@ -823,40 +830,40 @@
           (setf *mapa-normal* (copy-structure-sokoban (first estado-inicial)))
           (setf *mapa-reversed* (first estado-inicial))
           (setf *mapa-cantos* (elimina-cantos *mapa-normal*))
-          
+
           (setf destinos (copy-list (mapa-sokoban-destinos *mapa-reversed*)))
           (setf caixas (copy-list (second estado-inicial)))
           (setf homem (copy-list (third estado-inicial)))
           (setf *posicoes-caixas-originais* caixas)
           (setf *posicao-homem-original* homem)
-          
+
           (setf estado-inicial (cdr estado-inicial))
           (setf (second estado-inicial) (list (second estado-inicial)))
           (setf estado-inicial-reversed (copy-list estado-inicial))
           (setf (mapa-sokoban-destinos *mapa-reversed*) caixas)
           (setf (first estado-inicial-reversed) destinos)
-          
+
           (setf problema-normal (cria-problema estado-inicial
                                         (list #'operador)
                                         :objectivo? #'objectivo
-                                        :heuristica #'h2-normal))
+                                        :heuristica #'h1-normal))
           (setf problema-reversed (cria-problema estado-inicial-reversed
                                                  (list #'reversed-operator)
                                                  :objectivo? #'objectivo-reversed
                                                  :heuristica #'h1-reversed))
-          
+
           (setf caminho (faz-a-procura problema-reversed
                                        tipo-procura
                                        profundidade-maxima
                                        espaco-em-arvore?
                                        :problema-normal problema-normal))
-          
+
           ;(setf resultado (faz-caminho-normal caminho))
           (if (or (string-equal tipo-procura "bidirectional")
                   (string-equal tipo-procura "melhor.abordagem"))
               (setf resultado (faz-caminho-bidirectional caminho))
               (setf resultado (faz-caminho-reversed caminho caixas homem)))
-          
+
           ;     (format t "============================
           ;   NÓS EXPANDIDOS: ~A
           ;   NÓS GERADOS: ~A
