@@ -1,7 +1,7 @@
 (in-package :user)
 
 (defvar *mapa-normal*)
-(defvar *mapa*)
+(defvar *mapa-reversed*)
 (defvar *mapa-cantos*)
 (defvar *estados-gerados-normal* (make-hash-table :test 'equal))
 (defvar *estados-gerados-reversed* (make-hash-table :test 'equal))
@@ -45,7 +45,7 @@
 
 (defun h1-reversed (estado)
   (let ((caixas (first estado))
-        (destinos (copy-list (mapa-sokoban-destinos *mapa*)))
+        (destinos (copy-list (mapa-sokoban-destinos *mapa-reversed*)))
         (dist-min 1000)
         (index-min nil)
         (index 0)
@@ -84,10 +84,10 @@
 
 (defun h2-reversed (estado)
   (let* ((caixas (first estado))
-         (mapa (mapa-sokoban-mapa *mapa*))
-         (ocupadas (coloca-caixotes (mapa-sokoban-mapa-aux *mapa*) caixas))
+         (mapa (mapa-sokoban-mapa *mapa-reversed*))
+         (ocupadas (coloca-caixotes (mapa-sokoban-mapa-aux *mapa-reversed*) caixas))
          (num-caixas (list-length caixas))
-         (destinos (mapa-sokoban-destinos *mapa*))
+         (destinos (mapa-sokoban-destinos *mapa-reversed*))
          (res 0))
     (dolist (caixa caixas)
       (if (destino? destinos (first caixa) (second caixa))
@@ -197,7 +197,7 @@
     (let ((homem1 (first (second r)))
           (homem2 (first (second estado))))
       (when (and (equal (first r) (first estado))
-                 (ha-caminho *mapa* (first r) (first homem1) (second homem1) (first homem2) (second homem2)))
+                 (ha-caminho *mapa-reversed* (first r) (first homem1) (second homem1) (first homem2) (second homem2)))
         (return-from birectional-matcht? r)))))
     
 
@@ -442,7 +442,7 @@
     (setf novo-caminho (second (first (last caminho))))
     (setf destino (first novo-caminho))
     (unless (null destino)
-      (setf caminho-encontrado (encontra-caminho *mapa* caixas (first homem) (second homem) (first destino) (second destino)))
+      (setf caminho-encontrado (encontra-caminho *mapa-reversed* caixas (first homem) (second homem) (first destino) (second destino)))
       (nconc caminho-encontrado (cdr novo-caminho)))
     caminho-encontrado))
 
@@ -462,7 +462,7 @@
              (setf homem1 (first (second estado-normal)))
              (setf homem2 (first (second estado-reversed)))
              (unless (null (cdr (second estado-reversed)))
-               (setf res (append (cdr (encontra-caminho *mapa* (first estado-normal)
+               (setf res (append (cdr (encontra-caminho *mapa-reversed* (first estado-normal)
                                                         (first homem1) (second homem1)
                                                         (first homem2) (second homem2)))
                                  (cdr (second estado-reversed)))))
@@ -483,17 +483,17 @@
 
 
 (defun objectivo-reversed (estado)
-  (let* ((mapa *mapa*)
+  (let* ((mapa *mapa-reversed*)
          (caixotes (first estado))
          (homem (first (second estado)))
          (posicoes-certas 0))
-    (when (ha-caminho *mapa* *posicoes-caixas-originais* (first *posicao-homem-original*) (second *posicao-homem-original*)
-                      (first homem) (second homem))
-      (dotimes (i (list-length caixotes))
-        (dolist (p caixotes)
-          (when (equal p (nth i (mapa-sokoban-destinos mapa)))
-            (incf posicoes-certas))))
-      (= posicoes-certas (list-length caixotes)))))
+    (dotimes (i (list-length caixotes))
+      (dolist (p caixotes)
+        (when (and (equal p (nth i (mapa-sokoban-destinos mapa)))
+                   (ha-caminho *mapa-reversed* *posicoes-caixas-originais* (first *posicao-homem-original*) (second *posicao-homem-original*)
+                               (first homem) (second homem)))
+          (incf posicoes-certas))))
+    (= posicoes-certas (list-length caixotes))))
 
 
 (defun copy-structure-sokoban (mapa)
@@ -605,8 +605,8 @@
          (parede2 nil)
          (caminho (list homem))
          (proxima-posicao-homem nil)
-         (ocupadas (coloca-caixotes (limpa-mapa-aux *mapa*) caixas))
-         (destinos (mapa-sokoban-destinos *mapa*)))
+         (ocupadas (coloca-caixotes (limpa-mapa-aux *mapa-reversed*) caixas))
+         (destinos (mapa-sokoban-destinos *mapa-reversed*)))
     (if (eq (cadr caixa) (cadr homem))
         (loop
           (let ((next-x (+ (car caixa) (* i diff-l)))
@@ -614,15 +614,15 @@
             (setf parede1 (list next-x (1+ (cadr caixa))))
             (setf parede2 (list next-x (1- (cadr caixa))))
             (setf proxima-posicao-homem (list next-x-homem (cadr homem)))
-            (when (or (casa-ocupada *mapa* (first proxima-posicao-homem) (second proxima-posicao-homem))
+            (when (or (casa-ocupada *mapa-reversed* (first proxima-posicao-homem) (second proxima-posicao-homem))
                       (casa-preenchida ocupadas (first proxima-posicao-homem) (second proxima-posicao-homem)))
               (return-from tunnel-2 nil))
-            (when (or (casa-ocupada *mapa* (+ (first proxima-posicao-homem) diff-l) (second proxima-posicao-homem))
+            (when (or (casa-ocupada *mapa-reversed* (+ (first proxima-posicao-homem) diff-l) (second proxima-posicao-homem))
                       (casa-preenchida ocupadas (+ (first proxima-posicao-homem) diff-l) (second proxima-posicao-homem)))
               (return-from tunnel-2 (list (list next-x (cadr caixa)) proxima-posicao-homem caminho)))
             (when (or (destino? destinos next-x (cadr caixa))
-                      (not (casa-ocupada *mapa* (first parede1) (second parede1)))
-                      (not (casa-ocupada *mapa* (first parede2) (second parede2))))
+                      (not (casa-ocupada *mapa-reversed* (first parede1) (second parede1)))
+                      (not (casa-ocupada *mapa-reversed* (first parede2) (second parede2))))
               (return-from tunnel-2 (list (list next-x (cadr caixa)) proxima-posicao-homem caminho)))
             (push proxima-posicao-homem caminho)
             (incf i)))
@@ -632,21 +632,21 @@
             (setf parede1 (list (1+ (car caixa)) next-y))
             (setf parede2 (list (1- (car caixa)) next-y))
             (setf proxima-posicao-homem (list (car homem) next-y-homem))
-            (when (casa-ocupada *mapa* (first proxima-posicao-homem) (second proxima-posicao-homem))
+            (when (casa-ocupada *mapa-reversed* (first proxima-posicao-homem) (second proxima-posicao-homem))
               (return-from tunnel-2 nil))
-            (when (or (casa-ocupada *mapa* (first proxima-posicao-homem) (+ (second proxima-posicao-homem) diff-c))
+            (when (or (casa-ocupada *mapa-reversed* (first proxima-posicao-homem) (+ (second proxima-posicao-homem) diff-c))
                       (casa-preenchida ocupadas (first proxima-posicao-homem)  (+ (second proxima-posicao-homem) diff-c)))
               (return-from tunnel-2 (list (list (car caixa) next-y) proxima-posicao-homem caminho)))
             (when (or (destino? destinos (car caixa) next-y)
-                      (not (casa-ocupada *mapa* (first parede1) (second parede1)))
-                      (not (casa-ocupada *mapa* (first parede2) (second parede2))))
+                      (not (casa-ocupada *mapa-reversed* (first parede1) (second parede1)))
+                      (not (casa-ocupada *mapa-reversed* (first parede2) (second parede2))))
               (return-from tunnel-2 (list (list (car caixa) next-y) proxima-posicao-homem caminho)))
             (push proxima-posicao-homem caminho)
             (incf i))))))
 
 (defun player-surrounded? (caixas proxima-posicao)
-  (let ((ocupadas (coloca-caixotes (limpa-mapa-aux *mapa*) caixas)))
-    (null (jogadas-validas2 (mapa-sokoban-mapa *mapa*) ocupadas (first proxima-posicao) (second proxima-posicao)))))
+  (let ((ocupadas (coloca-caixotes (limpa-mapa-aux *mapa-reversed*) caixas)))
+    (null (jogadas-validas2 (mapa-sokoban-mapa *mapa-reversed*) ocupadas (first proxima-posicao) (second proxima-posicao)))))
 
 
 (defun operador (estado)
@@ -697,8 +697,8 @@
     (dotimes (i (list-length (first estado)))
       (let ((caminho nil)
             (caixa (nth i (first estado)))
-            (ocupadas (coloca-caixotes (limpa-mapa-aux *mapa*) (first estado))))
-        (dolist (jogada (jogadas-validas2 (mapa-sokoban-mapa *mapa*) ocupadas (first caixa) (second caixa)))
+            (ocupadas (coloca-caixotes (limpa-mapa-aux *mapa-reversed*) (first estado))))
+        (dolist (jogada (jogadas-validas2 (mapa-sokoban-mapa *mapa-reversed*) ocupadas (first caixa) (second caixa)))
           (block processa-jogadas
                  (setf novo-estado (copy-estado estado))
                  (setf pos-diff (list (- (first jogada) (first caixa)) (- (second jogada) (second caixa))))
@@ -711,7 +711,7 @@
                          (setf caminho (third tunnel-res))
                          (progn
                            (setf caminho nil)
-                           (setf caminho (encontra-caminho *mapa* (first estado) (first jogada) (second jogada) (first homem) (second homem)))
+                           (setf caminho (encontra-caminho *mapa-reversed* (first estado) (first jogada) (second jogada) (first homem) (second homem)))
                            (when (null caminho)
                              (return-from processa-jogadas nil))
                            (setf caminho (nconc (third tunnel-res) (cdr caminho)))))
@@ -821,10 +821,10 @@
           (setf *gerados-reversed* nil)
           (setf *bidirectional-match* nil)
           (setf *mapa-normal* (copy-structure-sokoban (first estado-inicial)))
-          (setf *mapa* (first estado-inicial))
+          (setf *mapa-reversed* (first estado-inicial))
           (setf *mapa-cantos* (elimina-cantos *mapa-normal*))
           
-          (setf destinos (copy-list (mapa-sokoban-destinos *mapa*)))
+          (setf destinos (copy-list (mapa-sokoban-destinos *mapa-reversed*)))
           (setf caixas (copy-list (second estado-inicial)))
           (setf homem (copy-list (third estado-inicial)))
           (setf *posicoes-caixas-originais* caixas)
@@ -833,7 +833,7 @@
           (setf estado-inicial (cdr estado-inicial))
           (setf (second estado-inicial) (list (second estado-inicial)))
           (setf estado-inicial-reversed (copy-list estado-inicial))
-          (setf (mapa-sokoban-destinos *mapa*) caixas)
+          (setf (mapa-sokoban-destinos *mapa-reversed*) caixas)
           (setf (first estado-inicial-reversed) destinos)
           
           (setf problema-normal (cria-problema estado-inicial
@@ -850,10 +850,13 @@
                                        profundidade-maxima
                                        espaco-em-arvore?
                                        :problema-normal problema-normal))
-          ;(setf caminho (first procura))
+          
           ;(setf resultado (faz-caminho-normal caminho))
-          ;(setf resultado (faz-caminho-reversed caminho caixas homem))
-          (setf resultado (faz-caminho-bidirectional caminho))
+          (if (or (string-equal tipo-procura "bidirectional")
+                  (string-equal tipo-procura "melhor.abordagem"))
+              (setf resultado (faz-caminho-bidirectional caminho))
+              (setf resultado (faz-caminho-reversed caminho caixas homem)))
+          
           ;     (format t "============================
           ;   NÓS EXPANDIDOS: ~A
           ;   NÓS GERADOS: ~A
